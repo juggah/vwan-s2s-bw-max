@@ -1,7 +1,12 @@
 ### Structure of this Article
-## Introduction
-## Concept Link aggregation in VirtualWan
-## Bicep Deployment and Configuration
+- [Introduction](#introduction)
+- [Concept: Link aggregation in Azure Virtual WAN](#concept-link-aggregation-in-azure-virtual-wan)
+  - [Structure of the bicep deployment](#structure-of-the-bicep-deployment)
+  - [Code \& Configuration](#code--configuration)
+      - [Virtual Wan](#virtual-wan)
+      - [Module for the VPN Gateway](#module-for-the-vpn-gateway)
+    - [Bandwidth Test in the Lab](#bandwidth-test-in-the-lab)
+  - [Conclusion](#conclusion-1)
 ## Test
 ## Conclusion
 
@@ -45,9 +50,9 @@ E.g.
 Fortigate.
 
 
-## Bicep Deployment 
+## Structure of the bicep deployment 
 
-[The diagram above](#1-concept) shows the Azure resource elements of which the solution consists.
+[The diagram above](High-Level-Overview) shows the Azure resource elements of which the solution consists.
 
 The virtualWan forms the outermost bracket around the other network components in a region.
 The virtualWan contains the regional virtualHub in which we create a vpnGateway.
@@ -155,6 +160,10 @@ module vpnRegion2 'vpngw.bicep' = {
   }
 }
 
+// the vpnSite needs the ip address output of the vpnGateway module. Sometimes there seems to be a delay between the 
+// provisioning of the vpnGw and the pip which lets the whole bicep script runs endlessly. 
+// this is why there is the conditional.
+
 resource vpnSiteRegion1 'Microsoft.Network/vpnSites@2023-05-01' = {
   name: 'vpnsite-${region1}'
   location: region1
@@ -254,8 +263,6 @@ resource hubVpnConnectionRegion1 'Microsoft.Network/vpnGateways/vpnConnections@2
   }
 }
 
- 
-
 resource hubVpnConnectionRegion2 'Microsoft.Network/vpnGateways/vpnConnections@2020-05-01' = {
   name: 'vpngw-${region2}/HubToOnPremConnection'
   properties: {
@@ -287,8 +294,6 @@ resource hubVpnConnectionRegion2 'Microsoft.Network/vpnGateways/vpnConnections@2
     ]
   }
 }
-
- 
 ```
 #### Module for the VPN Gateway
 `vpngw.bicep`
@@ -324,15 +329,16 @@ output vpnGwPublicIps array = [
 ]
 ```
 
-> **&#9432;** 
- From Azure side, as long as same address ranges are advertised from both the tunnels, the traffic distribution uses ECMP and each TCP or UDP flow will follow the same tunnel or path.
-You must also configure ECMP for your On Premises depending upon your device vendor so you can distribute traffic equally.
+
+
+> [!NOTE]
+>  From Azure side, as long as same address ranges are advertised from both the tunnels, the traffic distribution uses ECMP and each TCP or UDP flow will follow the same tunnel or path.
+
+> [!Caution] > You must also configure ECMP (L3/4 Loadsharing)  for your on premises devices. This is important otherwise the connection will be useless.
 
 
 
-
-
-### Test
+### Bandwidth Test in the Lab
 
 I test the throughput with the help of one Virtual Machine in each Region. As a testing tool I use the free NTTTCP by Microsoft. <a href="https://iperf.fr/iperf-download.php">iPerf3</a> is as well suitable for these bandwidth tests.
 
@@ -342,25 +348,22 @@ To test throughput one VM is configured the reciever (vm-northeurope) and the ot
 
 For demonstration purposes I limit the duration to 60 seconds to save costs. The VM Type shall be an V5 in order to be able to handle the load. 
 
-> **_NOTE:_**  It is important that the VM size is sufficient to support the network traffic. Otherwise the bandwidth test will not show the maximum throughput possible.
+> **_NOTE:_**   It is important that the VM size is sufficient to support the network traffic and load tool. Otherwise the bandwidth tests will not show the maximum throughput possible.
 
-Install NTTTCP on the VMs by installing git and pulling and building the NTTTCP source:
+Install NTTTCP on both VMs:
 
 ``` SH
 
-// For Ubuntu, install build-essential and git.
+# For Ubuntu, install build-essential and git.
 
 sudo apt-get update
 sudo apt-get -y install build-essential
 sudo apt-get -y install git
 
-// Make and install NTTTCP-for-Linux.
-
+# Make and install NTTTCP-for-Linux.
 
 git clone https://github.com/Microsoft/ntttcp-for-linux
-
 cd ntttcp-for-linux/src
-
 sudo make && sudo make install
 ```
 
@@ -391,10 +394,12 @@ By combining multiple vWan vpnSite Links you can dynamically expand s2s bandwidt
 
 Take into Consideration that the load sharing is set to Equal Cost Multi Pathing on your on-prem device.
 
-Take into consideration that one TCP Stream will not be able to exceed ~ 1,25 GBps. Multiple Senders will be able to utilise the full bandwidth potential of your aggregated interface.
+> [!Important] 
+> Take into consideration that one TCP Stream will not be able to exceed ~ 1,25 GBps. Multiple Senders will be able to utilise the full bandwidth potential of your aggregated interface.
 
 
-Take  into consideration that you will need an apropriate amount of public IP adresses on your remote site matching the amount of links you want to configure.
+> 
+> Take  into consideration that you will need an apropriate amount of public IP adresses on your remote site matching the amount of links you want to configure.
 
 Also if you need that much bandwidth it might be feasible to opt for an Express Route. The provisioning of multiple VPN Links and scaling the VPN Gateways to meet the bw requirements can quickly reach high costs. Also the remote site needs to be provisioned hardware- & and admin expertise wise.
 
