@@ -6,6 +6,7 @@
       - [Virtual Wan](#virtual-wan)
       - [Module for the VPN Gateway](#module-for-the-vpn-gateway)
       - [VNETs and VMs for the bandwidth test](#vnets-and-vms-for-the-bandwidth-test)
+  - [Bandwidth Test in the Lab](#bandwidth-test-in-the-lab)
   - [Conclusion](#conclusion)
 
 
@@ -542,8 +543,7 @@ resource VwanHubtovnet2 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnecti
   }
 }
 }
-
-
+```
 
 > [!NOTE]
 >  From Azure side, as long as same address ranges are advertised from both the tunnels, the traffic distribution uses ECMP and each TCP or UDP flow will follow the same tunnel or path.
