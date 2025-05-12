@@ -1,8 +1,9 @@
-param region1 string
-param region2 string
-param prefix2Region1 string
-param prefix2Region2 string
-param vmSize string 
+
+param region1 string = 'northeurope'
+param region2 string = 'germanywestcentral'
+param prefix2Region1 string = '192.168.1.0/24'
+param prefix2Region2 string = '192.168.2.0/24'
+param vmSize string = 'Standard_D16s_v5'
 param adminUserName string = 'azureuser'
 @secure()
 param adminPassword string = 'Password1234!'
